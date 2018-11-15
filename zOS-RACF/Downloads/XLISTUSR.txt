@@ -1,0 +1,58 @@
+/*                                REXX                                          
+                                                                                
+   Name: XLISTUSR                                                               
+                                                                                
+ Author: Al Ferguson - aferguson@neptunescove.org                               
+         Bruce Wells - brwells@us.ibm.com -- Original ISPF Version              
+                                                                                
+Purpose: Takes a user ID and displays its list of groups in                     
+         alphabetic order. If no user is supplied, IBMUSER is used              
+         as the default.                                                        
+                                                                                
+  Input:  A RACF user ID                                                        
+                                                                                
+Example: ex 'MYHLQ.RACF.CLISTS(XLISTUSR)' 'User'                                
+                                                                                
+ Access:                                                                        
+       - READ access to IRR.RADMIN.LISTGRP in FACILITY plus                     
+         authority to list the group profile for a given acl entry              
+       - READ access to IRR.RADMIN.LISTUSER in FACILITY plus                    
+         authority to list the user profile for a connected user                
+                                                                                
+         Users for which you are not authorized will not have their             
+         names included in the output.                                          
+                                                                                
+   NOTE: This uses BPXWUNIX & the Unix /bin/sort command. It requires           
+         an OMVS Segment.                                                       
+   NOTE: This runs under MVS/USS, and does NOT require TSO or ISPF.             
+                                                                                
+                                  Rexx                                */        
+ARG User .                                                                      
+IF User = "" THEN User=DIGEST_ACEE()                                            
+                                                                                
+IrrRc=IRRXUTIL("EXTRACT","USER",User,"lu",,"FALSE")                             
+  IF WORD(IrrRc,1) \= 0 THEN DO                                                 
+     SAY "Big Error in Little REXX! IRRXUTIL RC="IrrRc                          
+     EXIT 1                                                                     
+  END                                                                           
+x=BPXWUNIX("/bin/sort -bn -k1,1","lu.BASE.CGROUP.","Grps.")                     
+                                                                                
+SAY "Groups connected to:" User                                                 
+SAY "______________________________"                                            
+DO i=1 TO Grps.0; SAY Grps.i; END                                               
+                                                                                
+EXIT                                                                            
+/**********************************************************************         
+      Go to the ADDRESS Spaces ACEE & get current USERID                        
+***********************************************************************/        
+DIGEST_ACEE:                                                                    
+  AsxbPtr =STORAGE(224,4)                                                       
+  Asxb    =STORAGE(D2X(C2D(AsxbPtr)+108),4)                                     
+  Acee    =STORAGE(D2X(C2D(Asxb)+200),4)                                        
+  AceeEc  =STORAGE(D2X(C2D(Acee)+  0),4)       /* ACEE Eye Catcher    */        
+  IdLnth  =C2D(STORAGE(D2X(C2D(Acee)+20),1))                                    
+  DflGLnth=C2D(STORAGE(D2X(C2D(Acee)+29),1))                                    
+  AceeId  =STORAGE(D2X(C2D(Acee)+ 21),IdLnth)                                   
+  AceeDflg=STORAGE(D2X(C2D(Acee)+ 30),DflGLnth)                                 
+  AceeName=STORAGE(D2X(C2D(Acee)+100),4)                                        
+RETURN STRIP(AceeId)                                                            
