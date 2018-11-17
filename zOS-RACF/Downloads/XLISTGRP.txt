@@ -1,59 +1,59 @@
-/*                                REXX                                          
-                                                                                
-   Name: XLISTGRP                                                               
-                                                                                
- Author: Al Ferguson - aferguson@neptunescove.org                               
-         Bruce Wells - brwells@us.ibm.com -- Original ISPF Version              
-                                                                                
-Purpose: Takes a group name and displays the list of connected                  
-         users in alphabetic order, with each user's name and                   
-         group authority. If no group name is supplied, SYS1 is                 
-         used as the default.                                                   
-                                                                                
-  Input: A RACF group name                                                      
-                                                                                
-Example: ex 'MYHLQ.RACF.CLISTS(XLISTGRP)' 'Group'                               
-                                                                                
- Access:                                                                        
-       - READ access to IRR.RADMIN.LISTGRP in FACILITY plus                     
-         authority to list the group profile for a given acl entry              
-       - READ access to IRR.RADMIN.LISTUSER in FACILITY plus                    
-         authority to list the user profile for a connected user                
-                                                                                
-         Users for which you are not authorized will not have their             
-         names included in the output.                                          
-                                                                                
-   NOTE: This uses BPXWUNIX & the Unix /bin/sort command. It requires           
-         an OMVS Segment.                                                       
-   NOTE: This runs under MVS/USS, and does NOT require TSO or ISPF.             
-                                                                                
-                                  Rexx                                */        
-ARG Group .                                                                     
-IF Group = "" THEN Group=DIGEST_ACEE()                                          
-                                                                                
-IrrRc=IRRXUTIL("EXTRACT","GROUP",Group,"lg",,"FALSE")                           
-  IF WORD(IrrRc,1) \= 0 THEN DO                                                 
-     SAY "Big Error in Little REXX! IRRXUTIL RC="IrrRc                          
-     EXIT 1                                                                     
-  END                                                                           
-x=BPXWUNIX("/bin/sort -bn -k1,1","lg.BASE.GUSERID.","Users.")                   
-                                                                                
-SAY "UserIDs connected to:" Group                                               
-SAY "_______________________________"                                           
-DO i=1 TO Users.0; SAY Users.i; END                                             
-                                                                                
-EXIT                                                                            
-/**********************************************************************         
-      Go to the ADDRESS Spaces ACEE & get current USERID                        
-***********************************************************************/        
-DIGEST_ACEE:                                                                    
-  AsxbPtr =STORAGE(224,4)                                                       
-  Asxb    =STORAGE(D2X(C2D(AsxbPtr)+108),4)                                     
-  Acee    =STORAGE(D2X(C2D(Asxb)+200),4)                                        
-  AceeEc  =STORAGE(D2X(C2D(Acee)+  0),4)       /* ACEE Eye Catcher    */        
-  IdLnth  =C2D(STORAGE(D2X(C2D(Acee)+20),1))                                    
-  DflGLnth=C2D(STORAGE(D2X(C2D(Acee)+29),1))                                    
-  AceeId  =STORAGE(D2X(C2D(Acee)+ 21),IdLnth)                                   
-  AceeDflG=STORAGE(D2X(C2D(Acee)+ 30),DflGLnth)                                 
-  AceeName=STORAGE(D2X(C2D(Acee)+100),4)                                        
-RETURN STRIP(AceeDflG)                                                          
+/*                                REXX
+
+   Name: XLISTGRP
+
+ Author: Al Ferguson - aferguson@neptunescove.org
+         Bruce Wells - brwells@us.ibm.com -- Original ISPF Version
+
+Purpose: Takes a group name and displays the list of connected
+         users in alphabetic order, with each user's name and
+         group authority. If no group name is supplied, SYS1 is
+         used as the default.
+
+  Input: A RACF group name
+
+Example: ex 'MYHLQ.RACF.CLISTS(XLISTGRP)' 'Group'
+
+ Access:
+       - READ access to IRR.RADMIN.LISTGRP in FACILITY plus
+         authority to list the group profile for a given acl entry
+       - READ access to IRR.RADMIN.LISTUSER in FACILITY plus
+         authority to list the user profile for a connected user
+
+         Users for which you are not authorized will not have their
+         names included in the output.
+
+   NOTE: This uses BPXWUNIX & the Unix /bin/sort command. It requires
+         an OMVS Segment.
+   NOTE: This runs under MVS/USS, and does NOT require TSO or ISPF.
+
+                                  Rexx                                */
+ARG Group .
+IF Group = "" THEN Group=DIGEST_ACEE()
+
+IrrRc=IRRXUTIL("EXTRACT","GROUP",Group,"lg",,"FALSE")
+  IF WORD(IrrRc,1) \= 0 THEN DO
+     SAY "Big Error in Little REXX! IRRXUTIL RC="IrrRc
+     EXIT WORD(IrrRc,1)                                                                     
+  END
+x=BPXWUNIX("/bin/sort -bn -k1,1","lg.BASE.GUSERID.","Users.")
+
+SAY "UserIDs connected to:" Group
+SAY "_______________________________"
+DO i=1 TO Users.0; SAY Users.i; END
+
+EXIT
+/**********************************************************************
+      Go to the ADDRESS Spaces ACEE & get current USERID
+***********************************************************************/
+DIGEST_ACEE:
+  AsxbPtr =STORAGE(224,4)
+  Asxb    =STORAGE(D2X(C2D(AsxbPtr)+108),4)
+  Acee    =STORAGE(D2X(C2D(Asxb)+200),4)
+  AceeEc  =STORAGE(D2X(C2D(Acee)+  0),4)       /* ACEE Eye Catcher    */
+  IdLnth  =C2D(STORAGE(D2X(C2D(Acee)+20),1))
+  DflGLnth=C2D(STORAGE(D2X(C2D(Acee)+29),1))
+  AceeId  =STORAGE(D2X(C2D(Acee)+ 21),IdLnth)
+  AceeDflG=STORAGE(D2X(C2D(Acee)+ 30),DflGLnth)
+  AceeName=STORAGE(D2X(C2D(Acee)+100),4)
+RETURN STRIP(AceeDflG)
